@@ -1,5 +1,7 @@
 from .data import Polygon, Map, Actor, Brush
-from bpy.types import Context, Mesh, MeshLoopTriangle
+import bmesh
+import bpy
+from bpy.types import Context, Mesh, MeshLoopTriangle, ID, Object
 import math
 import numpy as np
 from typing import cast
@@ -7,13 +9,13 @@ from typing import cast
 
 # NOTE: This is taken more or less verbatim from the ase2t3d source, adopted for Python.
 # In the future, clean this up so that it's more clear what is going on.
-def create_polygon(mesh: Mesh, loop_triangle: MeshLoopTriangle) -> Polygon:
+def create_polygon(mesh_object: Object, loop_triangle: MeshLoopTriangle) -> Polygon:
+
+    mesh = mesh_object.data
 
     # get the texture coordinates using this
     # TODO: check active uv layer etc.
     texture_coordinates = [(mesh.uv_layers[0].data[i].uv[0], mesh.uv_layers[0].data[i].uv[1]) for i in loop_triangle.loops]
-
-    # TODO: swap U component!
 
     # TODO: get the texture size from somewhere
     texture_width = 256
@@ -65,7 +67,7 @@ def create_polygon(mesh: Mesh, loop_triangle: MeshLoopTriangle) -> Polygon:
     t2 -= v_translate
 
     # Coordinates
-    pt0, pt1, pt2 = [np.array(mesh.vertices[i].co) for i in loop_triangle.vertices]
+    pt0, pt1, pt2 = [np.array(mesh_object.matrix_world @ mesh.vertices[i].co) for i in loop_triangle.vertices]
 
     pt0[0] = -pt0[0]
     pt1[0] = -pt1[0]
@@ -155,17 +157,31 @@ def build_t3d(context: Context) -> Map:
     mesh_objects = [x for x in context.view_layer.objects.selected if x.type == 'MESH']
     if len(mesh_objects) == 0:
         raise RuntimeError('No mesh objects selected.')
-    for mesh_object in mesh_objects:
+    for original_mesh_object in mesh_objects:
         actor = Actor(name='MyCoolActor')
-        brush = Brush(name=mesh_object.name)
-        mesh_data = cast(Mesh, mesh_object.data)
+        brush = Brush(name=original_mesh_object.name)
+
+        depsgraph = context.evaluated_depsgraph_get()
+        bm = bmesh.new()
+        bm.from_object(original_mesh_object, depsgraph)
+        mesh_data = bpy.data.meshes.new('')
+        bm.to_mesh(mesh_data)
+        del bm
+        mesh_object = bpy.data.objects.new('', mesh_data)
+        mesh_object.matrix_world = original_mesh_object.matrix_world
+
         mesh_data.calc_loop_triangles()
+
         for index, loop_triangle in enumerate(mesh_data.loop_triangles):
-            polygon = create_polygon(mesh_data, loop_triangle)
+            polygon = create_polygon(mesh_object, loop_triangle)
             polygon.link = index
             brush.polygons.append(polygon)
         actor.brush = brush
         map_.actors.append(actor)
+
+        bpy.data.objects.remove(mesh_object)
+        bpy.data.meshes.remove(mesh_data)
+
     return map_
 
 
