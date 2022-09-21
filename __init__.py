@@ -1,10 +1,10 @@
 bl_info = {
-    "name": "T3D Importer/Exporter",
+    "name": "Unreal T3D Exporter",
     "author": "Colin Basnett",
     "version": (0, 1, 0),
     "blender": (3, 3, 0),
-    "location": "File > Export > T3D Export (.t3d)",
-    "description": "T3D Export (.t3d)",
+    "location": "File > Export > Unreal T3D Export (.t3d)",
+    "description": "Unreal T3D Export (.t3d)",
     "warning": "",
     "doc_url": "https://github.com/DarklightGames/io_scene_t3d",
     "tracker_url": "https://github.com/DarklightGames/io_scene_t3d/issues",
@@ -33,7 +33,7 @@ classes = (
 
 
 def t3d_export_menu_func(self, context):
-    self.layout.operator(t3d_exporter.T3DExportOperator.bl_idname, text='T3D (.t3d)')
+    self.layout.operator(t3d_exporter.T3DExportOperator.bl_idname, text='Unreal T3D (.t3d)')
 
 
 def register():
