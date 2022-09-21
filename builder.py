@@ -69,13 +69,9 @@ def create_polygon(mesh_object: Object, loop_triangle: MeshLoopTriangle) -> Poly
     # Coordinates
     pt0, pt1, pt2 = [np.array(mesh_object.matrix_world @ mesh.vertices[i].co) for i in loop_triangle.vertices]
 
-    pt0[0] = -pt0[0]
-    pt1[0] = -pt1[0]
-    pt2[0] = -pt2[0]
-
-    print(pt0)
-    print(pt1)
-    print(pt2)
+    pt0[1] = -pt0[1]
+    pt1[1] = -pt1[1]
+    pt2[1] = -pt2[1]
 
     dpt1 = np.subtract(pt1, pt0)
     dpt2 = np.subtract(pt2, pt0)
