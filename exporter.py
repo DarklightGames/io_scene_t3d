@@ -40,6 +40,7 @@ class T3DExportOperator(Operator, ExportHelper):
     def execute(self, context):
         t3d = build_t3d(context)
         export_t3d(t3d, self.filepath)
+        self.report({'INFO'}, 'T3D export successful')
         return {'FINISHED'}
 
 
