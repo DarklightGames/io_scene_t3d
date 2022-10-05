@@ -1,10 +1,10 @@
 from .data import Polygon, Map, Actor, Brush
 import bmesh
 import bpy
-from bpy.types import Context, Mesh, MeshLoopTriangle, ID, Object
+from bpy.types import Context, MeshLoopTriangle, Object
 import math
 import numpy as np
-from typing import cast
+from typing import cast, List, Dict
 
 
 # NOTE: This is taken more or less verbatim from the ase2t3d source, adopted for Python.
@@ -148,35 +148,54 @@ def create_polygon(mesh_object: Object, loop_triangle: MeshLoopTriangle) -> Poly
     )
 
 
+def build_t3d_actor(depsgraph: bpy.types.Depsgraph, mesh_object: Object):
+    actor = Actor(name='IOSceneT3D')
+    brush = Brush(name=mesh_object.name)
+
+    bm = bmesh.new()
+    bm.from_object(mesh_object, depsgraph)
+    mesh_data = bpy.data.meshes.new('')
+    bm.to_mesh(mesh_data)
+    del bm
+    mesh_object = bpy.data.objects.new('', mesh_data)
+    mesh_object.matrix_world = mesh_object.matrix_world
+
+    mesh_data.calc_loop_triangles()
+
+    for index, loop_triangle in enumerate(mesh_data.loop_triangles):
+        polygon = create_polygon(mesh_object, loop_triangle)
+        polygon.link = index
+        brush.polygons.append(polygon)
+    actor.brush = brush
+
+    bpy.data.objects.remove(mesh_object)
+    bpy.data.meshes.remove(mesh_data)
+
+    return actor
+
+
+def build_t3ds(context: Context) -> Dict[str, Map]:
+    t3ds = {}
+    mesh_objects = [x for x in context.view_layer.objects.selected if x.type == 'MESH']
+    depsgraph = context.evaluated_depsgraph_get()
+    for mesh_object in mesh_objects:
+        map_ = Map()
+        actor = build_t3d_actor(depsgraph, mesh_object)
+        map_.actors.append(actor)
+        t3ds[mesh_object.name] = map_
+    return t3ds
+
+
 def build_t3d(context: Context) -> Map:
     map_ = Map()
     mesh_objects = [x for x in context.view_layer.objects.selected if x.type == 'MESH']
     if len(mesh_objects) == 0:
         raise RuntimeError('No mesh objects selected.')
+
+    depsgraph = context.evaluated_depsgraph_get()
     for original_mesh_object in mesh_objects:
-        actor = Actor(name='MyCoolActor')
-        brush = Brush(name=original_mesh_object.name)
-
-        depsgraph = context.evaluated_depsgraph_get()
-        bm = bmesh.new()
-        bm.from_object(original_mesh_object, depsgraph)
-        mesh_data = bpy.data.meshes.new('')
-        bm.to_mesh(mesh_data)
-        del bm
-        mesh_object = bpy.data.objects.new('', mesh_data)
-        mesh_object.matrix_world = original_mesh_object.matrix_world
-
-        mesh_data.calc_loop_triangles()
-
-        for index, loop_triangle in enumerate(mesh_data.loop_triangles):
-            polygon = create_polygon(mesh_object, loop_triangle)
-            polygon.link = index
-            brush.polygons.append(polygon)
-        actor.brush = brush
+        actor = build_t3d_actor(depsgraph, original_mesh_object)
         map_.actors.append(actor)
-
-        bpy.data.objects.remove(mesh_object)
-        bpy.data.meshes.remove(mesh_data)
 
     return map_
 

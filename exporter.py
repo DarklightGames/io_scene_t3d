@@ -1,26 +1,26 @@
+import os
 from typing import TextIO, Iterable
 
 from bpy.types import Operator
-from bpy.props import StringProperty
+from bpy.props import StringProperty, BoolProperty
 from bpy_extras.io_utils import ExportHelper
 
-from .builder import build_t3d
+from .builder import build_t3d, build_t3ds
 from .data import Map
 
 
-class T3DExportOperator(Operator, ExportHelper):
-    bl_idname = 'export.t3d'
+class T3DExportMultipleOperator(Operator, ExportHelper):
+    bl_idname = 'export.t3d_multi'
     bl_label = 'Export'
-    bl_options = {'INTERNAL', 'UNDO'}
-    __doc__ = 'Export mesh(es) to T3D'
+    bl_options = {'INTERNAL'}
     filename_ext = '.t3d'
-    filter_glob: StringProperty(default='*.t3d', options={'HIDDEN'})
-
-    filepath: StringProperty(
-        name='File Path',
-        description='File path used for exporting the T3D file',
+    __doc__ = 'Export each selected mesh to its own T3D file in the selected directory'
+    directory: StringProperty(
+        name='Directory Path',
+        description='Directory path used for exporting the T3D files',
         maxlen=1024,
-        default='')
+    )
+    filter_folder: BoolProperty(default=True, options={'HIDDEN'})
 
     def invoke(self, context, event):
         context.window_manager.fileselect_add(self)
@@ -34,8 +34,39 @@ class T3DExportOperator(Operator, ExportHelper):
             return False
         return True
 
-    def draw(self, context):
-        pass
+    def execute(self, context):
+        t3ds = build_t3ds(context)
+        for name, t3d in t3ds.items():
+            export_t3d(t3d, os.path.join(self.directory, f'{name}.t3d'))
+        self.report({'INFO'}, 'T3D export successful')
+        return {'FINISHED'}
+
+
+class T3DExportOperator(Operator, ExportHelper):
+    bl_idname = 'export.t3d'
+    bl_label = 'Export'
+    bl_options = {'INTERNAL'}
+    __doc__ = 'Export meshes to T3D'
+    filename_ext = '.t3d'
+    filter_glob: StringProperty(default='*.t3d', options={'HIDDEN'})
+    filepath: StringProperty(
+        name='File Path',
+        description='File path used for exporting the T3D file',
+        maxlen=1024,
+        default=''
+    )
+
+    def invoke(self, context, event):
+        context.window_manager.fileselect_add(self)
+        return {'RUNNING_MODAL'}
+
+    @classmethod
+    def poll(cls, context):
+        has_selected_meshes = any(map(lambda x: x.type == 'MESH', context.view_layer.objects.selected))
+        if not has_selected_meshes:
+            cls.poll_message_set('No meshes are selected')
+            return False
+        return True
 
     def execute(self, context):
         t3d = build_t3d(context)
@@ -95,4 +126,5 @@ def export_t3d(t3d: Map, path: str):
 
 classes = (
     T3DExportOperator,
+    T3DExportMultipleOperator,
 )

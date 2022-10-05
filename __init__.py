@@ -36,14 +36,20 @@ def t3d_export_menu_func(self, context):
     self.layout.operator(t3d_exporter.T3DExportOperator.bl_idname, text='Unreal T3D (.t3d)')
 
 
+def t3d_export_multiple_menu_func(self, context):
+    self.layout.operator(t3d_exporter.T3DExportMultipleOperator.bl_idname, text='Unreal T3D (multiple) (.t3d)')
+
+
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
     bpy.types.TOPBAR_MT_file_export.append(t3d_export_menu_func)
+    bpy.types.TOPBAR_MT_file_export.append(t3d_export_multiple_menu_func)
 
 
 def unregister():
     bpy.types.TOPBAR_MT_file_export.remove(t3d_export_menu_func)
+    bpy.types.TOPBAR_MT_file_export.remove(t3d_export_multiple_menu_func)
 
 
 if __name__ == '__main__':
