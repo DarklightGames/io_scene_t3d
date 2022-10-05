@@ -2,7 +2,7 @@ bl_info = {
     "name": "Unreal T3D Exporter",
     "author": "Colin Basnett",
     "version": (0, 1, 0),
-    "blender": (3, 3, 0),
+    "blender": (2, 92, 0),
     "location": "File > Export > Unreal T3D Export (.t3d)",
     "description": "Unreal T3D Export (.t3d)",
     "warning": "",
